@@ -1,0 +1,2 @@
+# vps-init
+VPS bootstrapper
