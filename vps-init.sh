@@ -25,15 +25,15 @@ apt-get install -y ufw fail2ban net-tools
 echo "${yellow}
 Adding user ${USERNAME}.
 ${normal}"
-useradd "${USERNAME}"
-mkdir "${HOME_DIR}"
+useradd -m "${USERNAME}"
+usermod -aG sudo "${USERNAME}"
 mkdir "${HOME_DIR}/.ssh"
 chmod 700 "${HOME_DIR}/.ssh"
 
 echo "${yellow}
 Configuring SSH.
 ${normal}"
-curl "https://github.com/${GITHUB_USER}.keys > "${HOME_DIR}/.ssh/authorized_keys
+curl "https://github.com/${GITHUB_USER}.keys" > "${HOME_DIR}/.ssh/authorized_keys"
 chmod 400 "${HOME_DIR}/.ssh/authorized_keys"
 
 echo "DebianBanner no
