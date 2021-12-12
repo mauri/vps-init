@@ -2,7 +2,12 @@
 # Initializes a VPS installation of Ubuntu 20.04
 # 
 # Based on https://github.com/TedLeRoy/first-ten-seconds-centos-ubuntu
-
+#
+# Consider this a live TODO list about what needs to happen when you get a new bare
+# metal server and only have vnc root access.
+# These lines can be handy when provisioning infrequently. There are more suitable
+# tools to acomplish it such as https://www.ansible.com/ or https://www.chef.io/ 
+#
 set -euxo pipefail
 
 # Tweak at will
@@ -11,24 +16,23 @@ GITHUB_USER="mauri"
 HOME_DIR="/home/${USERNAME}"
 
 # Defining Colors for text output
-red=$( tput setaf 1 );
+_red=$( tput setaf 1 );
 yellow=$( tput setaf 3 );
-green=$( tput setaf 2 );
+_green=$( tput setaf 2 );
 normal=$( tput sgr 0 );
 
 echo "${yellow}
 Installing packages.
 ${normal}"
 apt-get update
+apt-get dist-upgrade
 apt-get install -y ufw fail2ban net-tools
 
 echo "${yellow}
 Adding user ${USERNAME}.
 ${normal}"
 useradd -m "${USERNAME}"
-usermod -aG sudo "${USERNAME}"
-mkdir "${HOME_DIR}/.ssh"
-chmod 700 "${HOME_DIR}/.ssh"
+mkdir -p "${HOME_DIR}/.ssh"
 
 echo "${yellow}
 Configuring SSH.
@@ -36,13 +40,26 @@ ${normal}"
 curl "https://github.com/${GITHUB_USER}.keys" > "${HOME_DIR}/.ssh/authorized_keys"
 chmod 400 "${HOME_DIR}/.ssh/authorized_keys"
 
+chmod 700 "${HOME_DIR}/.ssh"
+chown -R "${USERNAME}:${USERNAME}" "${HOME_DIR}/.ssh"
+
+echo "${yellow}
+Configuring sudoers.
+${normal}"
+echo "
+${USERNAME} ALL=(ALL) NOPASSWD:ALL" | tee /etc/sudoers.d/11-vps-init
+
+echo "${yellow}
+Configuring sshd.
+${normal}"
 echo "DebianBanner no
 Port 22022
-DisableForwarding yes
+DisableForwarding no
 PermitRootLogin no
 IgnoreRhosts yes
-PasswordAuthentication no" | sudo tee /etc/ssh/sshd_config.d/11-vps-init.conf
+PasswordAuthentication no" | tee /etc/ssh/sshd_config.d/11-vps-init.conf
 systemctl reload ssh
+
 
 echo "${yellow}
 Configuring fail2ban.
@@ -54,13 +71,14 @@ echo "# Default banning action (e.g. iptables, iptables-new,
 [ssh]
 enabled  = true
 banaction = iptables-multiport
-port     = ssh
+port     = 22022
 filter   = sshd
 logpath  = /var/log/auth.log
 maxretry = 5
 findtime = 43200
-bantime = 86400" | sudo tee /etc/fail2ban/jail.local
-sudo systemctl restart fail2ban
+bantime = 86400" | tee /etc/fail2ban/jail.local
+systemctl restart fail2ban
+
 
 
 exit 0
